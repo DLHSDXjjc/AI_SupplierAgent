@@ -47,6 +47,7 @@ pip-delete-this-directory.txt
 # ========================= Secrets & Local Config =========================
 # 真实配置（含 API key）不要提交，请复制 modelConfig.example.yaml → modelConfig.yaml 使用
 python/config/modelConfig.yaml
+SupplyChain/config/modelConfig.yaml
 *.env
 .env
 .env.local
@@ -55,8 +56,18 @@ python/config/modelConfig.yaml
 # ChromaDB 向量库可以由 create_vector_db.py 重新生成，无需提交
 python/vector_db/
 vector_db/
+SupplyChain/vector_db/
 
 # ========================= OS / IDE =========================
 .DS_Store
 Thumbs.db
 *.swp
+
+# ========================= Local-only directories (do not upload) =========================
+# 曾国藩项目：本地实验目录，含硬编码 API key 与个人语料，禁止上传
+ZengGuoFan/
+ZengGuoFan.zip
+# 图片目录：含身份证/社保等个人敏感照片，禁止上传
+picture/
+# 本地清洗脚本
+clean_txt.py

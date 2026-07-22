@@ -1,9 +1,9 @@
-# 供应链自动补货Agent — 模型与API配置文件（模板）
+# 供应链自动补货Agent — 模型与API配置文件（示例）
 #
 # 使用方法：
-#   1. 将本文件复制为 modelConfig.yaml（同目录）
-#   2. 将 api_key、Nacos 地址等替换为你自己的
-#   3. modelConfig.yaml 已被 .gitignore 忽略，不会被提交到仓库
+#   1. 复制本文件为 modelConfig.yaml (同目录)
+#   2. 将下方 api_key 替换为你自己的 DeepSeek API Key
+#   3. modelConfig.yaml 已在 .gitignore 中，不会被提交
 
 # ==================== Embedding模型配置 ====================
 embedding:
@@ -12,7 +12,7 @@ embedding:
 
 # ==================== DeepSeek LLM配置 ====================
 deepseek:
-  api_key: "YOUR_DEEPSEEK_API_KEY"                # 在 https://platform.deepseek.com 申请
+  api_key: "sk-YOUR_DEEPSEEK_API_KEY_HERE"         # DeepSeek API密钥(请替换为自己的)
   base_url: "https://api.deepseek.com/v1"          # DeepSeek API基础地址
   model: "deepseek-chat"                            # 模型名称
   temperature: 0.7                                  # 生成温度, 越高越随机
@@ -37,9 +37,9 @@ text_splitter:
 
 # ==================== Nacos服务注册配置 ====================
 nacos:
-  server_address: "127.0.0.1:8848"                   # Nacos服务端地址
-  service_name: "supplychain-rag"                    # 注册的服务名称（Java 侧 Feign 会用这个名字发现）
-  ip: "127.0.0.1"                                    # 本机IP地址（Java 侧要能通过它访问到本服务）
+  server_address: "192.168.203.129:8848"             # Nacos服务端地址
+  service_name: "supplychain-rag"                    # 注册的服务名称
+  ip: "192.168.203.129"                              # 本机IP地址
   port: 8001                                         # 服务端口号
   namespace: ""                                      # 命名空间(默认public)
   group: "DEFAULT_GROUP"                             # 分组
