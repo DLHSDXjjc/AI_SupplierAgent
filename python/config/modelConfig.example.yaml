@@ -1,0 +1,47 @@
+# 供应链自动补货Agent — 模型与API配置文件（模板）
+#
+# 使用方法：
+#   1. 将本文件复制为 modelConfig.yaml（同目录）
+#   2. 将 api_key、Nacos 地址等替换为你自己的
+#   3. modelConfig.yaml 已被 .gitignore 忽略，不会被提交到仓库
+
+# ==================== Embedding模型配置 ====================
+embedding:
+  model_name: "moka-ai/m3e-base"     # 中文优化的句子向量模型, 768维
+  device: "cpu"                        # 推理设备: cpu / cuda
+
+# ==================== DeepSeek LLM配置 ====================
+deepseek:
+  api_key: "YOUR_DEEPSEEK_API_KEY"                # 在 https://platform.deepseek.com 申请
+  base_url: "https://api.deepseek.com/v1"          # DeepSeek API基础地址
+  model: "deepseek-chat"                            # 模型名称
+  temperature: 0.7                                  # 生成温度, 越高越随机
+  max_tokens: 2000                                  # 最大生成token数
+
+# ==================== ChromaDB向量数据库配置 ====================
+chromadb:
+  persist_directory: "./vector_db"                   # 持久化存储路径
+  collection_name: "supply_chain_knowledge"          # 集合名称
+
+# ==================== 文本分块配置 ====================
+text_splitter:
+  chunk_size: 300                                    # 每个文本块的最大字符数
+  chunk_overlap: 40                                  # 相邻文本块的重叠字符数
+  separators:                                        # 分隔符优先级(从大到小)
+    - "\n\n"                                         # 段落分隔
+    - "\n"                                           # 换行分隔
+    - "。"                                           # 中文句号
+    - "；"                                           # 中文分号
+    - "，"                                           # 中文逗号
+    - " "                                            # 空格
+
+# ==================== Nacos服务注册配置 ====================
+nacos:
+  server_address: "127.0.0.1:8848"                   # Nacos服务端地址
+  service_name: "supplychain-rag"                    # 注册的服务名称（Java 侧 Feign 会用这个名字发现）
+  ip: "127.0.0.1"                                    # 本机IP地址（Java 侧要能通过它访问到本服务）
+  port: 8001                                         # 服务端口号
+  namespace: ""                                      # 命名空间(默认public)
+  group: "DEFAULT_GROUP"                             # 分组
+  cluster_name: "DEFAULT"                            # 集群名称
+  heartbeat_interval: 5                              # 心跳间隔(秒)

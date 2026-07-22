@@ -1,16 +1,8 @@
-# Compiled class file
+# ========================= Java =========================
 *.class
-
-# Log file
 *.log
-
-# BlueJ files
 *.ctxt
-
-# Mobile Tools for Java (J2ME)
 .mtj.tmp/
-
-# Package Files #
 *.jar
 *.war
 *.nar
@@ -18,7 +10,53 @@
 *.zip
 *.tar.gz
 *.rar
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+target/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.factorypath
+build/
+out/
+
+# ========================= Python =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.egg-info/
+dist/
+build/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ========================= Secrets & Local Config =========================
+# 真实配置（含 API key）不要提交，请复制 modelConfig.example.yaml → modelConfig.yaml 使用
+python/config/modelConfig.yaml
+*.env
+.env
+.env.local
+
+# ========================= Vector DB / Data caches =========================
+# ChromaDB 向量库可以由 create_vector_db.py 重新生成，无需提交
+python/vector_db/
+vector_db/
+
+# ========================= OS / IDE =========================
+.DS_Store
+Thumbs.db
+*.swp
