@@ -75,9 +75,11 @@ class SemanticCache:
 ```python
 def __init__(self, verbose=True):
     ...
-    self.semantic_cache = SemanticCache(  # 新增
-        redis_client=...,
-        embedding_model=...,  # 复用现有 m3e-base
+    # L2 启动时显式加载 embedding(不复用 ChromaDB 的懒加载,避免冷启动首次查询时阻塞)
+    self.embedding_model = SentenceTransformer(EMBEDDING_MODEL, device=EMBEDDING_DEVICE)
+    self.semantic_cache = SemanticCache(
+        redis_client=redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD),
+        embedding_model=self.embedding_model,
         threshold=SEMANTIC_CACHE_THRESHOLD,
         ttl=SEMANTIC_CACHE_TTL,
         key_prefix=SEMANTIC_CACHE_KEY_PREFIX,
@@ -89,7 +91,7 @@ def chat(self, query: str) -> dict:
     # 1. 入口:查 L2
     cached = await self.semantic_cache.get(query)
     if cached:
-        return {**cached, "cache_hit": True}
+        return {**cached, "success": True, "cache_hit": True}
 
     # 2. 原有 LLM 调用逻辑(保持不变)
     self._tools_used = []
@@ -101,20 +103,22 @@ def chat(self, query: str) -> dict:
         # 3. 出口:写 L2(仅当可缓存)
         if self._is_cacheable(response):
             await self.semantic_cache.put(query, response)
-        return {**response, "cache_hit": False}
+        return {**response, "success": True, "cache_hit": False}
 
     except Exception as e:
-        return {"answer": f"抱歉...{e}", "tools_used": [], "sources": [], "cache_hit": False}
+        return {"answer": f"抱歉...{e}", "tools_used": [], "sources": [], "success": False, "cache_hit": False}
 
 def _is_cacheable(self, response: dict) -> bool:
     """跟 L1 一致:success ∧ answer非空 ∧ tools_used ⊆ {knowledge_search}"""
+    if not response.get("success"):
+        return False
     if not response.get("answer"):
         return False
     tools = set(response.get("tools_used", []))
     return tools.issubset({"knowledge_search"})
 ```
 
-> **设计意图**:`chat()` 始终返回 4 字段 dict `{answer, tools_used, sources, cache_hit}`,`cache_hit` 始终是 bool(不是 None)。
+> **设计意图**:`chat()` 始终返回 5 字段 dict `{success, answer, tools_used, sources, cache_hit}`,`success` 和 `cache_hit` 始终是 bool(不是 None)。这样 `AskResponse` 直接透传,不再有写死 `success=True` 的 bug。
 
 ### 4.3 `AskResponse`(改)
 
@@ -128,18 +132,18 @@ class AskResponse(BaseModel):
     cache_hit: bool = False  # 新增
 ```
 
-**`/ask` 路由同步修复 `success` 写死 True 的 bug**:
+**`/ask` 路由直接透传 `chat()` 返回值**:
 ```python
 return AskResponse(
-    success=result.get("success", True),   # 从 result 拿,而不是写死
+    success=result["success"],          # chat() 显式声明,不再写死 True
     query=request.query,
     answer=result["answer"],
     tools_used=result["tools_used"],
     sources=result["sources"],
-    cache_hit=result.get("cache_hit", False),
+    cache_hit=result["cache_hit"],
 )
 ```
-(需要在 `chat()` 返回里加 `success` 字段,或保留现在的"成功路径 success=True、错误路径单独写 False"。具体由实施阶段定。)
+这样同时修了 `success` 写死 True 的 bug:L2 hit / LLM 成功 → `success=True`;LLM 异常 → `success=False`。
 
 ## 5. 配置
 
@@ -204,8 +208,8 @@ hit → chat() 早返 {..., "cache_hit": True}
    ↓
 [Java Feign] RagAnswerVO
    ↓
-[Java RagQueryServiceImpl] L1 判定(已经被 Feign 跳过,L1 必然 miss,所以这里只看是否回写 L1)
-   ├─ tools_used ⊆ {knowledge_search} → 写 L1(用本 query 算 md5)
+[Java RagQueryServiceImpl] 此时 L1 已经 miss(否则不会走到 Feign);按 L1 白名单决定是否回写 L1
+   ├─ tools_used ⊆ {knowledge_search} → 用本 query 算 md5 写 L1
    └─ 否则不写 L1
    ↓
 返回前端
@@ -314,7 +318,8 @@ curl -X POST http://localhost:8001/ask \
 # 走 Nacos 调到 supplychain-rag,期望 Java 端 RagAnswerVO.cacheHit=true 被透传
 
 # 5. 降级验证
-# 临时关掉 Redis → curl /ask 仍正常返回(cache_hit=false),日志 [L2] 异常 warn
+# 临时把 config 里的 redis.host 改成错误地址(或 iptables 阻断)→ 重启 service
+# → curl /ask 仍正常返回(cache_hit=false),日志 [L2] 异常 warn
 ```
 
 ## 10. 资源 / 性能
@@ -342,7 +347,6 @@ curl -X POST http://localhost:8001/ask \
 - [ ] 阈值自适应(根据最近 100 次 HIT 的相似度分布自动调)
 - [ ] L2 内容运营后台(看缓存里有什么 query、能不能手动 invalidate)
 - [ ] Java 端 L1 启动验证(独立任务)
-- [ ] Python 端把 `success` 字段从 chat() 返回里加上(决定 success 是否是 chat() 的责任——见 4.3 的备注)
 
 ## 13. 关联
 
