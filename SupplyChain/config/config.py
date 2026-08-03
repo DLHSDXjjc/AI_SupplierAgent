@@ -61,3 +61,17 @@ NACOS_NAMESPACE = _config["nacos"]["namespace"]                     # 命名空�
 NACOS_GROUP = _config["nacos"]["group"]                             # 分组
 NACOS_CLUSTER = _config["nacos"]["cluster_name"]                    # 集群
 NACOS_HEARTBEAT = _config["nacos"]["heartbeat_interval"]            # 心跳间隔
+
+# ==================== Redis配置 ====================
+REDIS_HOST = _config["redis"]["host"]                                 # Redis 地址
+REDIS_PORT = _config["redis"]["port"]                                 # Redis 端口
+REDIS_DB = _config["redis"]["db"]                                     # 数据库编号
+REDIS_PASSWORD = _config["redis"].get("password") or None             # 密码(无则 None)
+
+# ==================== 语义缓存配置 ====================
+SEMANTIC_CACHE_ENABLED = _config["semantic_cache"]["enabled"]          # 开关
+SEMANTIC_CACHE_TTL = _config["semantic_cache"]["ttl"]                  # 过期时间(秒)
+SEMANTIC_CACHE_THRESHOLD = _config["semantic_cache"]["threshold"]      # cosine 阈值
+SEMANTIC_CACHE_KEY_PREFIX = _config["semantic_cache"]["key_prefix"]    # key 前缀
+SEMANTIC_CACHE_INDEX_NAME = _config["semantic_cache"]["index_name"]    # 索引名
+SEMANTIC_CACHE_EMBEDDING_DIM = _config["semantic_cache"]["embedding_dim"]  # 向量维度
