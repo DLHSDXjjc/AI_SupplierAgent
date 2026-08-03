@@ -50,7 +50,7 @@ nacos:
 redis:
   host: "192.168.203.129"
   port: 6379
-  db: 3                                  # 跟 L1 共享 db=3
+  db: 3                                  # 跟 L1 共享 db=3,key 前缀隔离(L1=h:,L2=ragcache:)
   # password: ""                          # 暂无密码,如需启用去掉注释
 
 # ==================== 语义缓存配置(L2) ====================
@@ -58,6 +58,6 @@ semantic_cache:
   enabled: true                          # 一键开关
   ttl: 21600                             # 6h,跟 L1 对齐
   threshold: 0.88                        # cosine ≥ 这个数才算命中
-  key_prefix: "ragcache:"
-  index_name: "rag_semantic_cache"
+  key_prefix: "ragcache:"                # metadata HASH key 前缀
+  vector_key: "ragcache:vectors"         # vectorset key(存所有 embedding)
   embedding_dim: 768                     # 跟现有 m3e-base 一致
