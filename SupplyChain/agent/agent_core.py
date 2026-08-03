@@ -158,6 +158,21 @@ class SupplyChainAgent:
             "Final Answer: 回答内容"
         )
 
+    @staticmethod
+    def _is_cacheable(response: dict) -> bool:
+        """
+        判断 LLM 响应是否可写入 L2 缓存。
+        跟 L1 规则一致:success ∧ answer非空 ∧ tools_used ⊆ {knowledge_search}。
+        空 tools_used(LLM 直答)算子集,可缓存。
+        """
+        if not response.get("success", True):
+            return False
+        answer = response.get("answer", "")
+        if not answer or not answer.strip():
+            return False
+        tools = set(response.get("tools_used", []))
+        return tools.issubset({"knowledge_search"})
+
     def chat(self, query: str) -> dict:
         """
         与Agent对话的主接口
