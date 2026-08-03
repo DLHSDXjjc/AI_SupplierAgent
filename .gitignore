@@ -71,3 +71,6 @@ ZengGuoFan.zip
 picture/
 # 本地清洗脚本
 clean_txt.py
+
+# Claude Code 项目级配置（含本机自动化规则与敏感值黑名单，仅本地生效）
+.claude/
