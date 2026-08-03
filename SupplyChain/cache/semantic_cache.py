@@ -82,6 +82,10 @@ class SemanticCache:
             vec = await self._embed(query)
             if vec is None:
                 return None
+            # *** VSIM 原理:不是遍历,内部用 HNSW 图搜索(O(log N));
+            # *** score = cosine similarity(normalized 向量点积,∈ [0,1]);
+            # *** vectorset 是 Redis 8 first-class data type(跟 String/Hash/Set 同级);
+            # *** HNSW 是工业标准:faiss/Milvus/Pinecone/Qdrant/ChromaDB/pgvector 都用它
             # VSIM 查 top-1,带 score
             sim_result = await self.redis.execute_command(
                 "VSIM", self.vector_key,
@@ -97,6 +101,9 @@ class SemanticCache:
             if isinstance(element, bytes):
                 element = element.decode("utf-8")
             score = float(sim_result[1])
+            # *** 0.88 阈值判断:score < self.threshold → miss(similarity 越大越近)
+            # *** threshold 不是写死的,链路:yaml.semantic_cache.threshold
+            # ***   → config.SEMANTIC_CACHE_THRESHOLD → __init__ 参数 → self.threshold
             if score < self.threshold:
                 logger.info(f'[L2] MISS query="{query}" sim={score:.3f} < {self.threshold}')
                 return None
