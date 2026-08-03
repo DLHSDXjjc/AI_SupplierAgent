@@ -353,3 +353,40 @@ curl -X POST http://localhost:8001/ask \
 - [[rag-double-cache-plan]] — L1 + L2 整体进度
 - L1 spec 待补充
 - L1 Java 代码: `D:/BaiduNetdiskDownload/SpringCloud微服务—资料/day02-Docker/资料/hmall/cart-service/...`
+
+---
+
+## 14. 修订记录
+
+### 2026-08-03 实施中发现的两处 spec 偏差
+
+实施时跑通测试发现两处与原 spec 不符的地方,已修正:
+
+#### 14.1 Redis db: 3 → 0 → 不限(改用 vectorset 后回 3)
+- **原 spec**:`redis.db: 3`(跟 L1 共享)
+- **首次修正**:RediSearch 限制索引只能在 db=0,改成 `db: 0`,L1 在 Java 端独立 db=3
+- **二次修正**:改用 Redis 8 vectorset 后(见 14.2),db 不再受限制,**回 db=3**(跟 L1 共享,key 前缀隔离)
+- 现状:`modelConfig.yaml` 的 `redis.db: 3`
+
+#### 14.2 向量存储: RediSearch HNSW → Redis 8 vectorset
+- **原 spec**:用 RediSearch HNSW 索引做 KNN
+- **问题**:RediSearch 8.6 KNN 语法 `*=>[KNN 1 @embedding $vec AS score]` 在当前环境(redis 8.6.2 + RediSearch 80600 + redis-py 8.1)报 `Syntax error at offset 1 near >[`,试了 5 个变体(去掉 AS score、用 VECTOR_RANGE、改用 RESP2、改用高层 SearchIndex API)都不工作
+- **替代方案**:Redis 8 原生 `vectorset`(ver=1)
+  - 写:`VADD key VALUES dim v1 v2 ... element`
+  - 读:`VSIM key VALUES dim v1 v2 ... WITHSCORES`
+  - 实测:5 个 query 测,同义改写 "采购流程" vs "采购的流程" similarity=0.9956,远超 0.88 阈值
+  - 优点:不用建索引、不用 db=0 限制、不受 RESP 协议影响
+- **现状实现**:
+  - 删了 `_ensure_index` 方法(不再需要建索引)
+  - `get()` 用 `VSIM WITHSCORES` 查 top-1,score 是 cosine similarity(0-1)
+  - `put()` 用 `VADD` 写向量 + 单独 HASH(`{vector_key}:meta` 后缀)存 query/answer/tools_used/sources
+- **spec 影响**:
+  - 第 5 节配置 `index_name` 字段作废,改 `vector_key`(vectorset 的 key)
+  - 第 4.1 节 `_ensure_index` 方法描述作废
+  - 第 6 节 score 语义从"cosine distance(越小越近)"改为"cosine similarity(越大越近)"
+  - 第 7 节 Java 端 cacheHit 字段**不变**(语义都是"是否来自缓存")
+
+### 这次变更没动:
+- 7 个关键决策(位置/embedding/规则/阈值/cache_hit/降级/L2 hit 不写回)
+- L1 ↔ L2 独立性原则
+- 跨语言 cache_hit 字段约定
